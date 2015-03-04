@@ -1,0 +1,11 @@
+--- a/Info.plist
++++ b/Info.plist
+@@ -22,7 +22,7 @@
+ 		</dict>
+ 	</array>
+ 	<key>CFBundleIdentifier</key>
+-	<string>com.company.DummyAppName</string>
++	<string>com.company.RealAppName</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>
