@@ -2,38 +2,11 @@
 
 #include <time.h>
 
-#include <pthread.h>
-
 void qwordMfc(unsigned char * bytes, unsigned int bytesCount, unsigned int * freqs);
 void naiveMfc(unsigned char * bytes, unsigned int bytesCount, unsigned int * freqs);
 
-typedef struct {
-    unsigned char * bytes;
-    unsigned int bytesCount;
-    unsigned int * freqs;
-} MfcFuncParams;
-
 static const unsigned int possibleBytesNumber = 256;
 static const unsigned int threadsNumber = 2;
-
-static void * threadFunc(void * thread_arg) {
-    MfcFuncParams * params = (MfcFuncParams *)thread_arg;
-    qwordMfc(params->bytes, params->bytesCount, params->freqs);
-    return NULL;
-}
-
-static int createThread(pthread_t * t, MfcFuncParams * params) {
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    
-    int returnCode = pthread_create(t, &attr, &threadFunc, params);
-    
-    if (returnCode) {
-        return returnCode;
-    }
-    
-    return 0;
-}
 
 static void sumFrequencies(unsigned int * freqs1, unsigned int * freqs2, unsigned int * sumFreqs) {
     for (int i=0; i<possibleBytesNumber; ++i) {
@@ -73,31 +46,15 @@ int mostFrequentCharacterEx(char * str, int size, char * resultChar) {
     unsigned int splitedSize = (size / (threadsNumber * bytesInQword)) * bytesInQword;
     unsigned int remainingSize = size - (threadsNumber * splitedSize);
     
-    int returnCode = 0;
-    
-    MfcFuncParams t1Params = {bytes, splitedSize, freqs1};
-    pthread_t t1;
-    returnCode = createThread(&t1, &t1Params);
-    if (returnCode) {
-        return returnCode;
-    }
-    
-    MfcFuncParams t2Params = {bytes + splitedSize, splitedSize, freqs2};
-    pthread_t t2;
-    returnCode = createThread(&t2, &t2Params);
-    if (returnCode) {
-        return returnCode;
-    }
-    
-    returnCode = pthread_join(t1, NULL);
-    if (returnCode) {
-        return returnCode;
-    }
-    
-    returnCode = pthread_join(t2, NULL);
-    if (returnCode) {
-        return returnCode;
-    }
+    dispatch_group_t g = dispatch_group_create();
+    dispatch_group_async(g, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        qwordMfc(bytes, splitedSize, freqs1);
+    });
+    dispatch_group_async(g, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        qwordMfc(bytes + splitedSize, splitedSize, freqs2);
+    });
+    dispatch_group_wait(g, DISPATCH_TIME_FOREVER);
+    dispatch_release(g);
     
     naiveMfc(bytes + 2*splitedSize, remainingSize, remainingFreqs);
     
